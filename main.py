@@ -2,15 +2,6 @@ from playlistgpt import *
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-# load in credentials from .env file
-load_dotenv()
-OPENAI_KEY = os.getenv('OPENAI_KEY')
-SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
-SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
-
-PROMPT_OUTPUT_FILE = './promptres.txt'
-SPOTIFY_REDIRECT_URL = 'http://localhost:8000/callback'
-
 app = FastAPI()
 
 class PlaylistCreate(BaseModel):
@@ -20,9 +11,21 @@ class PlaylistCreate(BaseModel):
     public: bool
     collaborative: bool
 
+@app.get("/")
+async def hello():
+    return "Hello World!"
 
 @app.post("/create-playlist")
 async def create_playlist(playlist_req: PlaylistCreate):
+    # load in credentials from .env file
+    load_dotenv()
+    OPENAI_KEY = os.getenv('OPENAI_KEY')
+    SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+    SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+
+    PROMPT_OUTPUT_FILE = './promptres.txt'
+    SPOTIFY_REDIRECT_URL = 'http://localhost:8000/callback'
+
     # create text model config
     text_model_conf = TextModelConfig()
 

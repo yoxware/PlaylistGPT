@@ -90,7 +90,7 @@ class PlaylistGPTGenerator:
         try:
             openai.api_key = self.config.openai_key
             prompt = self.generate_prompt(num_songs=num_songs, playlist_seed=playlist_seed)
-            stop = [str(num_songs) + "."] if not self.model_config.stop else self.model_config.stop
+            stop = [str(int(num_songs) + 1) + "."] if not self.model_config.stop else self.model_config.stop
 
             response = openai.Completion.create(
                 model=self.model_config.model_name,
@@ -111,7 +111,9 @@ class PlaylistGPTGenerator:
             return ''
     
     def format_output(self, song_list_raw: List[str]) -> Dict[str, Union[Dict, None]]:
-        filtered_lines = [line.strip()[line.find('.') + 1:].strip() for line in song_list_raw if line.strip()]
+        filtered_lines = []
+        for s in song_list_raw:
+            filtered_lines.append(s[s.index('.') + 2:].strip().replace('\n', ''))
         track_data = {}
         for idx, line in enumerate(filtered_lines):
             track, artist = line.split(',')
@@ -123,7 +125,7 @@ class PlaylistGPTGenerator:
 
         if os.path.isfile(self.config.output_file):
             song_list_raw = self.read_saved_prompt_output()
-        elif self.config.api_key:
+        elif self.config.openai_key:
             api_response = self.call_openai_api(num_songs, playlist_seed)
             if api_response:
                 self.save_prompt_output(api_response)
@@ -199,3 +201,40 @@ class PlaylistGPTGenerator:
         else:
             print("Error: missing new playlist params")
             return ''
+
+def test():
+    load_dotenv()
+    OPENAI_KEY = os.getenv('OPENAI_KEY')
+    SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+    SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+
+    PROMPT_OUTPUT_FILE = './promptres.txt'
+    SPOTIFY_REDIRECT_URL = 'http://localhost:8000/callback'
+
+    text_model_conf = TextModelConfig()
+
+    # create generator config
+    generator_conf = GeneratorConfig(
+        openai_key=OPENAI_KEY,
+        spotify_client_id=SPOTIFY_CLIENT_ID,
+        spotify_client_secret=SPOTIFY_CLIENT_SECRET,
+        spotify_redirect_url=SPOTIFY_REDIRECT_URL,
+        output_file=PROMPT_OUTPUT_FILE
+    )
+
+    # create playlist params
+    playlist_params = NewPlaylistParams(
+        playlist_name='Mania Psychedelia',
+        playlist_seed='High-Energy psychedelic rock with heavy elements of distortion',
+        num_songs='20',
+        public=True,
+        collaborative=False
+    )
+
+    generator = PlaylistGPTGenerator(
+        config=generator_conf,
+        model_config=text_model_conf
+    )
+    return generator.generate_new_gpt_playlist(new_playlist_params=playlist_params)
+
+webbrowser.open(test())
